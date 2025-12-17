@@ -6,22 +6,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileBtn = document.querySelector('.mobile-menu-btn');
     const navLinks = document.querySelector('.nav-links');
 
-    if (mobileBtn) {
+    if (mobileBtn && navLinks) {
         mobileBtn.addEventListener('click', () => {
-            const isHidden = navLinks.style.display === 'none' || !navLinks.style.display;
-            navLinks.style.display = isHidden ? 'flex' : 'none';
-            if (isHidden) {
-                navLinks.style.flexDirection = 'column';
-                navLinks.style.position = 'absolute';
-                navLinks.style.top = '80px';
-                navLinks.style.left = '0';
-                navLinks.style.width = '100%';
-                navLinks.style.background = '#ffffff';
-                navLinks.style.padding = '20px';
-                navLinks.style.borderBottom = '1px solid var(--border-color)';
+            navLinks.classList.toggle('active');
+            const icon = mobileBtn.querySelector('i');
+            if (navLinks.classList.contains('active')) {
+                icon.setAttribute('data-lucide', 'x');
             } else {
-                navLinks.style = '';
+                icon.setAttribute('data-lucide', 'menu');
             }
+            lucide.createIcons();
+        });
+        
+        // Close menu when clicking a link
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                mobileBtn.querySelector('i').setAttribute('data-lucide', 'menu');
+                lucide.createIcons();
+            });
         });
     }
 
@@ -31,12 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth'
+                // Offset for fixed header
+                const headerOffset = 80;
+                const elementPosition = target.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
                 });
-                if (window.innerWidth <= 768) {
-                    navLinks.style = '';
-                }
             }
         });
     });
@@ -46,20 +52,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (canvas) {
         const ctx = canvas.getContext('2d');
         let width, height;
+        let animationFrameId;
 
-        // Globe Particles
+        // Responsive Configuration
+        const isMobile = window.innerWidth < 768;
+        
+        // Globe Particles - Reduce count on mobile for performance
         let particles = [];
-        const particleCount = 1200;
+        const particleCount = isMobile ? 600 : 1200;
 
         // Side Frequency Dots
         let sideParticles = [];
-        const sideCountPerSide = 15; // 15 dots on left, 15 on right
+        const sideCountPerSide = isMobile ? 8 : 15; 
 
         // Interaction State
         let mouseX = 0;
         let mouseY = 0;
         let isTyping = false;
         let typingTimeout;
+        
+        // Performance optimization: Throttle resize events
+        let resizeTimeout;
 
         // Detect Typing
         const inputs = document.querySelectorAll('input, textarea');
@@ -69,13 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(() => {
                     isTyping = false;
-                }, 200); // Stop effect 200ms after last keystroke
+                }, 200); 
             });
         });
 
         function resize() {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
+            // Re-init particles on significant resize if needed, 
+            // but for smooth mobile browser address bar interaction, maybe just update bounds.
+            // For now, we'll keep it simple.
         }
 
         // --- Globe Particle Class ---
@@ -83,12 +99,14 @@ document.addEventListener('DOMContentLoaded', () => {
             constructor(theta, phi) {
                 this.theta = theta;
                 this.phi = phi;
-                this.size = 0.8;
+                this.size = isMobile ? 0.6 : 0.8;
                 this.baseColor = `rgba(59, 130, 246`;
             }
 
             update(rotationX, rotationY) {
-                const r = Math.min(width, height) * 0.35;
+                // Adjust globe size for mobile
+                const globeScale = isMobile ? 0.25 : 0.35;
+                const r = Math.min(width, height) * globeScale;
 
                 let x = r * Math.sin(this.phi) * Math.cos(this.theta);
                 let y = r * Math.sin(this.phi) * Math.sin(this.theta);
@@ -103,7 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 let z2 = z1 * Math.cos(rotationX) + y * Math.sin(rotationX);
 
                 // Project to 2D
-                const scale = 300 / (300 + z2);
+                const perspective = isMobile ? 250 : 300;
+                const scale = perspective / (perspective + z2);
                 this.x2d = width / 2 + x1 * scale;
                 this.y2d = height / 2 + y1 * scale;
 
@@ -127,58 +146,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.total = total;
 
                 // Distribute vertically with some padding
-                const spacing = height * 0.6 / total;
-                const startY = height * 0.2;
+                const verticalSpan = isMobile ? 0.8 : 0.6;
+                const startRatio = isMobile ? 0.1 : 0.2;
+                
+                const spacing = height * verticalSpan / total;
+                const startY = height * startRatio;
                 this.baseY = startY + index * spacing;
 
-                this.baseX = side === 'left' ? 40 : width - 40;
+                this.baseX = side === 'left' ? (isMobile ? 15 : 40) : width - (isMobile ? 15 : 40);
                 this.x = this.baseX;
                 this.y = this.baseY;
 
-                this.size = 2.5;
-                // Max brightness (opacity 1.0)
+                this.size = isMobile ? 1.5 : 2.5;
                 this.color = side === 'left' ? 'rgba(59, 130, 246, 1.0)' : 'rgba(139, 92, 246, 1.0)';
             }
 
             update(time) {
                 if (isTyping) {
-                    // Typing mode: Formal/Smooth Horizontal Fluctuation
-                    // Use a sine wave to create a rhythmic "breathing" or "equalizer" pattern
                     const speed = 8;
                     const frequency = 0.8;
-
-                    // Wave calculation: -1 to 1
                     const wave = Math.sin(time * speed + this.index * frequency);
+                    // Less extreme stretch on mobile
+                    const toggleFactor = isMobile ? 3 : 5;
+                    const stretch = 1 + ((wave + 1) / 2) * toggleFactor;
 
-                    // Map wave to stretch factor: 1x to 6x width
-                    // (wave + 1) / 2 goes from 0 to 1.
-                    const stretch = 1 + ((wave + 1) / 2) * 5;
-
-                    this.x = this.baseX; // Keep centered
+                    this.x = this.baseX; 
                     this.scaleX = stretch;
                     this.scaleY = 1;
                     this.alpha = 1.0;
                 } else {
-                    // Idle mode: Stable
                     this.x = this.baseX;
                     this.scaleX = 1;
                     this.scaleY = 1;
-                    this.alpha = 0.6; // Brighter idle
+                    this.alpha = 0.6;
                 }
             }
 
             draw() {
                 ctx.beginPath();
-                // Add glow effect
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
+                // Add glow effect - reduce for mobile performance
+                if (!isMobile) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = this.color;
+                }
 
                 ctx.ellipse(this.x, this.y, this.size * this.scaleX, this.size * this.scaleY, 0, 0, Math.PI * 2);
                 ctx.fillStyle = this.color.replace('1.0)', `${this.alpha})`);
                 ctx.fill();
 
-                // Reset shadow to avoid affecting other elements
-                ctx.shadowBlur = 0;
+                if (!isMobile) {
+                    ctx.shadowBlur = 0;
+                }
             }
         }
 
@@ -202,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 attempts++;
             }
-            console.log(`Initialized ${particles.length} globe particles.`);
 
             // Init Side Particles
             sideParticles = [];
@@ -210,15 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 sideParticles.push(new SideParticle('left', i, sideCountPerSide));
                 sideParticles.push(new SideParticle('right', i, sideCountPerSide));
             }
-            console.log(`Initialized ${sideParticles.length} side particles.`);
         }
 
-        // Track mouse
+        // Track mouse - normalize for mobile touch if needed
         document.addEventListener('mousemove', (e) => {
             mouseX = (e.clientX - window.innerWidth / 2) * 0.001;
             mouseY = (e.clientY - window.innerHeight / 2) * 0.001;
         });
-
+        
+        // Basic touch interaction for mobile
+        document.addEventListener('touchmove', (e) => {
+             if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                mouseX = (touch.clientX - window.innerWidth / 2) * 0.001;
+                mouseY = (touch.clientY - window.innerHeight / 2) * 0.001;
+             }
+        }, { passive: true });
 
 
         let rotY = 0;
@@ -245,23 +269,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 p.draw();
             });
 
-
-
-            requestAnimationFrame(animate);
+            animationFrameId = requestAnimationFrame(animate);
         }
 
         window.addEventListener('resize', () => {
-            resize();
-            init();
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                resize();
+                // Optionally re-init to adjust particle counts dynamically
+                // init(); 
+            }, 100);
         });
 
         // Ensure canvas is sized before init
-        resize();
         init();
         animate();
-        console.log("Animation started.");
-    } else {
-        console.error("Canvas element not found!");
     }
 });
 
