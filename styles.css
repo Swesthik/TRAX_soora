@@ -38,16 +38,22 @@
 
 html {
     scroll-behavior: smooth;
+    background-color: var(--bg-dark);
 }
 
 body {
     font-family: var(--font-sans);
-    background-color: var(--bg-dark);
+    background-color: transparent;
     color: var(--text-main);
     line-height: 1.6;
     overflow-x: hidden;
     font-weight: 400;
     /* Regular weight for body */
+}
+
+#app {
+    position: relative;
+    z-index: 1;
 }
 
 /* Utilities */
@@ -1292,6 +1298,6 @@ footer {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    z-index: 0;
     pointer-events: none;
 }
