@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             lucide.createIcons();
         });
-        
+
         // Close menu when clicking a link
         navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
@@ -54,23 +54,22 @@ document.addEventListener('DOMContentLoaded', () => {
         let width, height;
         let animationFrameId;
 
-        // Responsive Configuration
-        const isMobile = window.innerWidth < 768;
-        
-        // Globe Particles - Reduce count on mobile for performance
+        // Configuration (Unified for all devices)
+
+        // Globe Particles
         let particles = [];
-        const particleCount = isMobile ? 600 : 1200;
+        const particleCount = 1200;
 
         // Side Frequency Dots
         let sideParticles = [];
-        const sideCountPerSide = isMobile ? 8 : 15; 
+        const sideCountPerSide = 15;
 
         // Interaction State
         let mouseX = 0;
         let mouseY = 0;
         let isTyping = false;
         let typingTimeout;
-        
+
         // Performance optimization: Throttle resize events
         let resizeTimeout;
 
@@ -82,16 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(() => {
                     isTyping = false;
-                }, 200); 
+                }, 200);
             });
         });
 
         function resize() {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
-            // Re-init particles on significant resize if needed, 
-            // but for smooth mobile browser address bar interaction, maybe just update bounds.
-            // For now, we'll keep it simple.
         }
 
         // --- Globe Particle Class ---
@@ -99,13 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
             constructor(theta, phi) {
                 this.theta = theta;
                 this.phi = phi;
-                this.size = isMobile ? 0.6 : 0.8;
+                this.size = 0.8;
                 this.baseColor = `rgba(59, 130, 246`;
             }
 
             update(rotationX, rotationY) {
-                // Adjust globe size for mobile
-                const globeScale = isMobile ? 0.25 : 0.35;
+                // Adjust globe size
+                const globeScale = 0.35;
                 const r = Math.min(width, height) * globeScale;
 
                 let x = r * Math.sin(this.phi) * Math.cos(this.theta);
@@ -121,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let z2 = z1 * Math.cos(rotationX) + y * Math.sin(rotationX);
 
                 // Project to 2D
-                const perspective = isMobile ? 250 : 300;
+                const perspective = 300;
                 const scale = perspective / (perspective + z2);
                 this.x2d = width / 2 + x1 * scale;
                 this.y2d = height / 2 + y1 * scale;
@@ -146,18 +142,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.total = total;
 
                 // Distribute vertically with some padding
-                const verticalSpan = isMobile ? 0.8 : 0.6;
-                const startRatio = isMobile ? 0.1 : 0.2;
-                
+                const verticalSpan = 0.6;
+                const startRatio = 0.2;
+
                 const spacing = height * verticalSpan / total;
                 const startY = height * startRatio;
                 this.baseY = startY + index * spacing;
 
-                this.baseX = side === 'left' ? (isMobile ? 15 : 40) : width - (isMobile ? 15 : 40);
+                this.baseX = side === 'left' ? 40 : width - 40;
                 this.x = this.baseX;
                 this.y = this.baseY;
 
-                this.size = isMobile ? 1.5 : 2.5;
+                this.size = 2.5;
                 this.color = side === 'left' ? 'rgba(59, 130, 246, 1.0)' : 'rgba(139, 92, 246, 1.0)';
             }
 
@@ -166,11 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const speed = 8;
                     const frequency = 0.8;
                     const wave = Math.sin(time * speed + this.index * frequency);
-                    // Less extreme stretch on mobile
-                    const toggleFactor = isMobile ? 3 : 5;
+                    // Standard stretch
+                    const toggleFactor = 5;
                     const stretch = 1 + ((wave + 1) / 2) * toggleFactor;
 
-                    this.x = this.baseX; 
+                    this.x = this.baseX;
                     this.scaleX = stretch;
                     this.scaleY = 1;
                     this.alpha = 1.0;
@@ -184,19 +180,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             draw() {
                 ctx.beginPath();
-                // Add glow effect - reduce for mobile performance
-                if (!isMobile) {
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = this.color;
-                }
+                // Add glow effect
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
 
                 ctx.ellipse(this.x, this.y, this.size * this.scaleX, this.size * this.scaleY, 0, 0, Math.PI * 2);
                 ctx.fillStyle = this.color.replace('1.0)', `${this.alpha})`);
                 ctx.fill();
 
-                if (!isMobile) {
-                    ctx.shadowBlur = 0;
-                }
+                ctx.shadowBlur = 0;
             }
         }
 
@@ -234,14 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
             mouseX = (e.clientX - window.innerWidth / 2) * 0.001;
             mouseY = (e.clientY - window.innerHeight / 2) * 0.001;
         });
-        
+
         // Basic touch interaction for mobile
         document.addEventListener('touchmove', (e) => {
-             if (e.touches.length > 0) {
+            if (e.touches.length > 0) {
                 const touch = e.touches[0];
                 mouseX = (touch.clientX - window.innerWidth / 2) * 0.001;
                 mouseY = (touch.clientY - window.innerHeight / 2) * 0.001;
-             }
+            }
         }, { passive: true });
 
 
